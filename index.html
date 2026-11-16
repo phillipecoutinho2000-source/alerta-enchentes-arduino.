@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alerta de Enchentes | Arduino Uno</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px/1.6 Arial,sans-serif;background:#f3f8fb;color:#173247}
+header{background:linear-gradient(130deg,#082f49,#0369a1);color:white;padding:42px 20px}
+.wrap{max-width:900px;margin:auto;padding:0 18px}h1{font-size:clamp(2rem,6vw,3rem);line-height:1.1}
+nav{background:white;padding:12px;display:flex;gap:15px;overflow:auto;position:sticky;top:0}
+nav a{white-space:nowrap;color:#075985;font-weight:bold;text-decoration:none}
+main{padding:25px 0}.card{background:white;border:1px solid #d9e5ec;border-radius:14px;padding:20px;margin-bottom:17px}
+h2{color:#082f49;margin-top:0}h3{color:#075985}table{width:100%;border-collapse:collapse}td,th{border:1px solid #d9e5ec;padding:9px;text-align:left}th{background:#eaf4fa}
+pre{background:#0b1724;color:#e2e8f0;padding:15px;border-radius:9px;overflow:auto;font-size:13px}
+.note{background:#fff7ed;border-left:4px solid #ea580c;padding:12px}.good{background:#f0fdf4;border-left:4px solid #16a34a;padding:12px}
+footer{background:#082f49;color:white;padding:22px}
+</style></head><body>
+<header><div class="wrap"><p>FEIRA DE CIÊNCIAS</p><h1>Alerta de Enchentes<br>com Arduino Uno</h1>
+<p>Guia educativo para conhecer os materiais, as ligações, a programação e os testes de um protótipo de monitoramento da água.</p></div></header>
+<nav><a href="#sobre">Sobre</a><a href="#materiais">Materiais</a><a href="#ligacoes">Ligações</a><a href="#codigo">Código</a><a href="#teste">Testes</a><a href="#cuidados">Cuidados</a></nav>
+<main class="wrap">
+<section class="card" id="sobre"><h2>1. Sobre o projeto</h2>
+<p>O protótipo demonstra como um sensor pode acompanhar a presença e a variação da água e como um Arduino pode acionar avisos visuais e sonoros.</p>
+<p class="note"><b>Importante:</b> este é um protótipo educativo. Não prevê enchentes nem substitui estações profissionais, previsões meteorológicas ou alertas da Defesa Civil.</p></section>
+<section class="card" id="materiais"><h2>2. Materiais</h2><ul>
+<li>Arduino Uno R3 e cabo USB;</li><li>Sensor de água de 3 pinos (SIG/S, VCC e GND);</li><li>Protoboard e fios jumper;</li>
+<li>LED verde, amarelo e vermelho;</li><li>3 resistores de 220 Ω ou 330 Ω, um por LED;</li><li>Buzzer ativo de 5 V e 2 pinos;</li><li>LCD 16×2 com módulo I²C;</li><li>Recipiente plástico para demonstração.</li></ul>
+<p>Confira as identificações dos pinos dos seus próprios componentes. Um buzzer de 3 pinos pode exigir ligação diferente.</p></section>
+<section class="card" id="ligacoes"><h2>3. Ligações ao Arduino</h2>
+<table><tr><th>Componente</th><th>Conexão</th></tr>
+<tr><td>Sensor SIG/S</td><td>A0</td></tr><tr><td>Sensor VCC/+</td><td>5V</td></tr><tr><td>Sensor GND/−</td><td>GND</td></tr>
+<tr><td>LED verde (ânodo)</td><td>D2, em série com resistor próprio</td></tr><tr><td>LED amarelo (ânodo)</td><td>D3, em série com resistor próprio</td></tr><tr><td>LED vermelho (ânodo)</td><td>D4, em série com resistor próprio</td></tr>
+<tr><td>Cátodo de cada LED (perna curta)</td><td>GND</td></tr><tr><td>Buzzer ativo 2 pinos (+)</td><td>D5</td></tr><tr><td>Buzzer (−)</td><td>GND</td></tr>
+<tr><td>LCD I²C GND / VCC</td><td>GND / 5V</td></tr><tr><td>LCD SDA / SCL</td><td>A4 / A5</td></tr></table>
+<p class="good"><b>Atenção aos resistores:</b> cada LED precisa do seu próprio resistor em série. Não coloque as duas pernas do LED na mesma fileira eletricamente conectada da protoboard.</p>
+<p>Na protoboard comum, cada grupo de cinco furos de um lado da canaleta central é conectado internamente. Os dois lados da canaleta são isolados. As trilhas de alimentação podem ter interrupções; confira sua placa.</p></section>
+<section class="card" id="codigo"><h2>4. Código de exemplo</h2>
+<p>O exemplo usa LCD I²C no endereço 0x27 e a biblioteca LiquidCrystal I2C (Frank de Brabander). Os limites 300 e 600 são apenas valores iniciais de demonstração e precisam ser ajustados com as leituras do sensor real.</p>
+<pre><code>#include &lt;Wire.h&gt;
+#include &lt;LiquidCrystal_I2C.h&gt;
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+const int sensor = A0;
+const int verde = 2, amarelo = 3, vermelho = 4, buzzer = 5;
+
+void setup() {
+  pinMode(verde, OUTPUT);
+  pinMode(amarelo, OUTPUT);
+  pinMode(vermelho, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+  lcd.init();
+  lcd.backlight();
+  Serial.begin(9600);
+}
+
+void loop() {
+  int leitura = analogRead(sensor);
+  Serial.println(leitura);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Nivel: ");
+  lcd.print(leitura);
+
+  digitalWrite(verde, LOW);
+  digitalWrite(amarelo, LOW);
+  digitalWrite(vermelho, LOW);
+  digitalWrite(buzzer, LOW);
+
+  if (leitura &lt; 300) {
+    digitalWrite(verde, HIGH);
+    lcd.setCursor(0, 1);
+    lcd.print("Situacao segura");
+  } else if (leitura &lt; 600) {
+    digitalWrite(amarelo, HIGH);
+    lcd.setCursor(0, 1);
+    lcd.print("Atencao");
+  } else {
+    digitalWrite(vermelho, HIGH);
+    digitalWrite(buzzer, HIGH);
+    lcd.setCursor(0, 1);
+    lcd.print("Alerta maximo!");
+  }
+  delay(500);
+}</code></pre>
+<p class="note">Abra o Monitor Serial, observe os valores com o sensor seco e em diferentes contatos com água e ajuste os limites. Se a leitura diminuir quando molha, inverta a lógica. Os valores não representam alturas oficiais de rios.</p></section>
+<section class="card" id="teste"><h2>5. Como testar</h2><ol>
+<li>Desconecte o Arduino antes de mudar qualquer fio.</li><li>Confira polaridade dos LEDs, resistores e pinos dos módulos.</li>
+<li>Mantenha Arduino, protoboard e conexões longe do recipiente com água.</li><li>Ligue por USB e observe a leitura no Monitor Serial.</li>
+<li>Aproxime o sensor da água gradualmente, sem molhar a placa eletrônica.</li><li>Registre as leituras e ajuste as faixas demonstrativas.</li><li>Confira se cada LED acende separadamente e se o buzzer funciona na faixa definida.</li></ol></section>
+<section class="card" id="cuidados"><h2>6. Cuidados e limitações</h2><ul>
+<li>Não mergulhe Arduino, protoboard ou LCD na água.</li><li>Use baixa tensão e mantenha as mãos secas.</li>
+<li>O sensor resistivo pode sofrer corrosão se permanecer molhado.</li><li>Seque o sensor após a demonstração.</li>
+<li>Para uso real seriam necessários sensores adequados, calibração, proteção contra intempéries, energia de reserva e validação técnica.</li></ul></section>
+<section class="card"><h2>7. Fontes para aprender mais</h2><ul>
+<li><a href="https://www.gov.br/cemaden/pt-br">Cemaden – monitoramento e alertas</a></li>
+<li><a href="https://www.gov.br/ana/pt-br">Agência Nacional de Águas e Saneamento Básico</a></li>
+<li><a href="https://www.arduino.cc/">Site oficial do Arduino</a></li></ul></section>
+</main><footer><div class="wrap">Alerta de Enchentes com Arduino Uno • Material educativo</div></footer></body></html>
